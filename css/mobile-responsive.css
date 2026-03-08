@@ -1,0 +1,198 @@
+/* Mobile Responsive CSS for Dashboards */
+/* Add this file to dashboard pages: <link rel="stylesheet" href="css/mobile-responsive.css"> */
+
+/* Base responsive settings */
+* {
+    box-sizing: border-box;
+}
+
+/* Mobile-first approach - styles for screens smaller than 768px */
+@media screen and (max-width: 768px) {
+
+    /* General layout adjustments */
+    body {
+        font-size: 14px;
+        padding: 0;
+        margin: 0;
+    }
+
+    /* Container adjustments */
+    .container {
+        padding: 10px !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* Navigation adjustments */
+    nav,
+    .navbar {
+        flex-direction: column;
+        padding: 10px;
+    }
+
+    nav a,
+    .navbar a {
+        display: block;
+        padding: 10px;
+        margin: 5px 0;
+    }
+
+    /* Card/Panel adjustments */
+    .card,
+    .panel,
+    .dashboard-card {
+        margin: 10px 0 !important;
+        padding: 15px !important;
+        width: 100% !important;
+    }
+
+    /* Grid layouts - stack on mobile */
+    .grid,
+    .dashboard-grid,
+    [style*="display: grid"] {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+    }
+
+    /* Flex layouts - stack on mobile */
+    .flex,
+    .dashboard-flex,
+    [style*="display: flex"] {
+        flex-direction: column !important;
+    }
+
+    /* Tables - make scrollable */
+    table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+        font-size: 12px;
+    }
+
+    table th,
+    table td {
+        padding: 8px 4px !important;
+        font-size: 12px;
+    }
+
+    /* Buttons - full width on mobile */
+    button,
+    .btn,
+    input[type="submit"] {
+        width: 100% !important;
+        margin: 5px 0 !important;
+        padding: 12px !important;
+        font-size: 14px !important;
+    }
+
+    /* Form inputs - full width */
+    input,
+    select,
+    textarea {
+        width: 100% !important;
+        margin: 5px 0 !important;
+        padding: 10px !important;
+        font-size: 14px !important;
+    }
+
+    /* Hide less important elements on mobile */
+    .hide-mobile {
+        display: none !important;
+    }
+
+    /* Sidebar - convert to top menu */
+    .sidebar,
+    aside {
+        position: relative !important;
+        width: 100% !important;
+        height: auto !important;
+        margin-bottom: 20px;
+    }
+
+    /* Main content - full width */
+    .main-content,
+    main {
+        margin-left: 0 !important;
+        width: 100% !important;
+        padding: 10px !important;
+    }
+
+    /* Headers */
+    h1 {
+        font-size: 24px !important;
+    }
+
+    h2 {
+        font-size: 20px !important;
+    }
+
+    h3 {
+        font-size: 18px !important;
+    }
+
+    /* Stats cards */
+    .stat-card,
+    .stats-card {
+        min-width: 100% !important;
+        margin: 10px 0 !important;
+    }
+
+    /* Modal/Dialog adjustments */
+    .modal,
+    .dialog {
+        width: 95% !important;
+        max-width: 95% !important;
+        margin: 10px auto !important;
+    }
+
+    /* Charts - make responsive */
+    canvas,
+    .chart-container {
+        max-width: 100% !important;
+        height: auto !important;
+    }
+
+    /* Action buttons group */
+    .action-buttons,
+    .button-group {
+        flex-direction: column !important;
+    }
+
+    .action-buttons button,
+    .button-group button {
+        margin: 5px 0 !important;
+    }
+}
+
+/* Tablet adjustments (768px - 1024px) */
+@media screen and (min-width: 769px) and (max-width: 1024px) {
+
+    .container {
+        padding: 20px;
+    }
+
+    .grid,
+    .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    table {
+        font-size: 13px;
+    }
+}
+
+/* Utility classes */
+.mobile-only {
+    display: none;
+}
+
+@media screen and (max-width: 768px) {
+    .mobile-only {
+        display: block !important;
+    }
+
+    .desktop-only {
+        display: none !important;
+    }
+}

@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users collection
+    match /users/{userId} {
+      // Anyone can read and create users (no Firebase Auth for students)
+      allow read, create: if true;
+      
+      // Anyone can update users (app handles validation)
+      allow update: if true;
+      
+      // Anyone can delete (app handles validation)
+      allow delete: if true;
+    }
+    
+    // Surveys collection
+    match /surveys/{surveyId} {
+      allow read, write: if true;
+    }
+    
+    // Feedbacks collection
+    match /feedbacks/{feedbackId} {
+      allow read, write: if true;
+    }
+    
+    // Departments collection
+    match /departments/{deptId} {
+      allow read, write: if true;
+    }
+    
+    // Questions collection
+    match /questions/{questionId} {
+      allow read, write: if true;
+    }
+    
+    // Sessions collection
+    match /sessions/{sessionId} {
+      allow read, write: if true;
+    }
+    
+    // Classes collection
+    match /classes/{classId} {
+      allow read, write: if true;
+    }
+  }
+}

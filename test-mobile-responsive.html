@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Responsive Test - Faculty Feedback System</title>
+    <link rel="stylesheet" href="css/dashboard.css">
+    <style>
+        .test-info {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 10000;
+        }
+
+        .test-info div {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-wrapper">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>📱 Test Portal</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active">
+                    <span class="icon">🏠</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="icon">📝</span>
+                    <span>Test Item 1</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="icon">✅</span>
+                    <span>Test Item 2</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="welcome-section">
+                    <h1>Mobile Responsive Test</h1>
+                    <p>Testing mobile navigation and responsive design</p>
+                </div>
+                <div class="user-info">
+                    <div class="info-badge">
+                        <span class="label">Status:</span>
+                        <span class="value">Testing</span>
+                    </div>
+                    <div class="user-avatar">
+                        <span>T</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="dashboard-content">
+                <div class="stats-grid">
+                    <div class="stat-card stat-available">
+                        <div class="stat-icon">📱</div>
+                        <div class="stat-info">
+                            <h3 id="screenWidth">0</h3>
+                            <p>Screen Width</p>
+                        </div>
+                    </div>
+                    <div class="stat-card stat-completed">
+                        <div class="stat-icon">📐</div>
+                        <div class="stat-info">
+                            <h3 id="screenHeight">0</h3>
+                            <p>Screen Height</p>
+                        </div>
+                    </div>
+                    <div class="stat-card stat-pending">
+                        <div class="stat-icon">💻</div>
+                        <div class="stat-info">
+                            <h3 id="deviceType">Desktop</h3>
+                            <p>Device Type</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="surveys-section">
+                    <h2>Test Instructions</h2>
+                    <div style="padding: 20px; line-height: 1.8;">
+                        <h3>✅ What to Check:</h3>
+                        <ol style="margin-left: 20px;">
+                            <li><strong>Mobile (≤768px):</strong> Hamburger menu should appear in top-left</li>
+                            <li><strong>Mobile:</strong> Sidebar should be hidden by default</li>
+                            <li><strong>Mobile:</strong> Click hamburger to open sidebar</li>
+                            <li><strong>Mobile:</strong> Click overlay (dark area) to close sidebar</li>
+                            <li><strong>Desktop (>768px):</strong> Sidebar always visible, no hamburger</li>
+                            <li><strong>Responsive:</strong> Stats cards stack on mobile, grid on desktop</li>
+                        </ol>
+
+                        <h3 style="margin-top: 20px;">🔧 How to Test:</h3>
+                        <ul style="margin-left: 20px;">
+                            <li>Resize browser window to different widths</li>
+                            <li>Use browser DevTools (F12) → Toggle device toolbar</li>
+                            <li>Test on actual mobile device</li>
+                            <li>Check the info box at bottom-right for current dimensions</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Test Info Display -->
+    <div class="test-info">
+        <div><strong>Screen Info:</strong></div>
+        <div>Width: <span id="infoWidth">0</span>px</div>
+        <div>Height: <span id="infoHeight">0</span>px</div>
+        <div>Type: <span id="infoType">Desktop</span></div>
+        <div>Menu: <span id="menuStatus">Hidden</span></div>
+    </div>
+
+    <script src="js/mobile-nav.js"></script>
+    <script>
+        function updateScreenInfo() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            let deviceType = 'Desktop';
+
+            if (width <= 480) {
+                deviceType = 'Mobile (Small)';
+            } else if (width <= 768) {
+                deviceType = 'Mobile/Tablet';
+            } else if (width <= 1024) {
+                deviceType = 'Tablet';
+            }
+
+            // Update stat cards
+            document.getElementById('screenWidth').textContent = width + 'px';
+            document.getElementById('screenHeight').textContent = height + 'px';
+            document.getElementById('deviceType').textContent = deviceType;
+
+            // Update info box
+            document.getElementById('infoWidth').textContent = width;
+            document.getElementById('infoHeight').textContent = height;
+            document.getElementById('infoType').textContent = deviceType;
+
+            // Check menu status
+            const toggle = document.querySelector('.mobile-menu-toggle');
+            const menuStatus = toggle && window.getComputedStyle(toggle).display !== 'none' ? 'Visible' : 'Hidden';
+            document.getElementById('menuStatus').textContent = menuStatus;
+        }
+
+        // Update on load and resize
+        updateScreenInfo();
+        window.addEventListener('resize', updateScreenInfo);
+
+        // Update menu status when sidebar opens/closes
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar) {
+            const observer = new MutationObserver(updateScreenInfo);
+            observer.observe(sidebar, {
+                attributes: true,
+                attributeFilter: ['class']
+            });
+        }
+    </script>
+</body>
+
+</html>

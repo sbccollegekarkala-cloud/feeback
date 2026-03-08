@@ -1,0 +1,73 @@
+{
+    "indexes": [{
+            "collectionGroup": "users",
+            "queryScope": "COLLECTION",
+            "fields": [{
+                    "fieldPath": "rollNumber",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "department",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "feedbacks",
+            "queryScope": "COLLECTION",
+            "fields": [{
+                    "fieldPath": "studentId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "submittedAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "feedbacks",
+            "queryScope": "COLLECTION",
+            "fields": [{
+                    "fieldPath": "surveyId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "submittedAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "feedbacks",
+            "queryScope": "COLLECTION",
+            "fields": [{
+                    "fieldPath": "department",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "submittedAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "surveys",
+            "queryScope": "COLLECTION",
+            "fields": [{
+                    "fieldPath": "department",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "isActive",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "createdAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        }
+    ],
+    "fieldOverrides": []
+}
