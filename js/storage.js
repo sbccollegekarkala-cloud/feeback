@@ -358,6 +358,21 @@ const Storage = {
     },
 
     /**
+     * Find user by roll number (localStorage fallback)
+     */
+    findUserByRollNumber(rollNumber) {
+        try {
+            if (!rollNumber) return null;
+            const users = this.getUsers();
+            const normalized = rollNumber.toString().trim().toUpperCase();
+            return users.find(u => (u.rollNumber || '').toString().toUpperCase() === normalized) || null;
+        } catch (error) {
+            console.warn('Failed to find user by roll number:', error);
+            return null;
+        }
+    },
+
+    /**
      * Find user by ID with error handling
      * @param {string} id - User ID to search for
      * @returns {Object|null} User object or null if not found
@@ -590,6 +605,30 @@ const Storage = {
         return feedback;
     },
 
+    migrateFeedbackRollNumbers() {
+        const feedbacks = this.getFeedbacks();
+        const users = this.getUsers();
+        let migrated = 0;
+
+        const updatedFeedbacks = feedbacks.map(feedback => {
+            if ((!feedback.studentRollNumber || feedback.studentRollNumber === '') && feedback.studentId) {
+                const student = users.find(u => u.id === feedback.studentId);
+                if (student && student.rollNumber) {
+                    feedback.studentRollNumber = student.rollNumber;
+                    migrated++;
+                }
+            }
+            return feedback;
+        });
+
+        if (migrated > 0) {
+            localStorage.setItem('feedbacks', JSON.stringify(updatedFeedbacks));
+        }
+
+        console.log(`✅ Migrated ${migrated} feedback records with student roll numbers`);
+        return { migrated, total: feedbacks.length };
+    },
+
     getFeedbacksByStudentId(studentId) {
         const feedbacks = this.getFeedbacks();
         return feedbacks.filter(feedback => feedback.studentId === studentId);
@@ -738,6 +777,15 @@ const Storage = {
         const feedbacks = this.getFeedbacks();
         const filtered = feedbacks.filter(f => f.studentId !== studentId);
         localStorage.setItem('feedbacks', JSON.stringify(filtered));
+    },
+
+    // Delete a single feedback by ID
+    deleteFeedback(feedbackId) {
+        const feedbacks = this.getFeedbacks();
+        const filtered = feedbacks.filter(f => f.id !== feedbackId);
+        if (filtered.length === feedbacks.length) return false;
+        localStorage.setItem('feedbacks', JSON.stringify(filtered));
+        return true;
     },
 
     // Generate unique ID

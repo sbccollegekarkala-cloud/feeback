@@ -291,6 +291,31 @@
             font-weight: 600;
         }
 
+        .delete-btn {
+            background: #f56565;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .delete-btn:hover {
+            background: #e53e3e;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(245, 101, 101, 0.3);
+        }
+
+        .delete-btn:active {
+            transform: translateY(0);
+        }
+
         .feedback-stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -378,6 +403,10 @@
                     <span class="icon">👨‍💼</span>
                     <span>Manage Faculties</span>
                 </a>
+                <a href="manage-users.html" class="nav-item">
+                    <span class="icon">👥</span>
+                    <span>Manage Users</span>
+                </a>
                 <a href="select-faculties.html" class="nav-item">
                     <span class="icon">🏫</span>
                     <span>Class Survey</span>
@@ -440,19 +469,27 @@
                     <div class="filters-grid">
                         <div class="form-group">
                             <label for="filterYear">📅 Year</label>
-                            <select id="filterYear" onchange="applyFilters()">
+                            <select id="filterYear">
                                 <option value="">-- Select Year --</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label for="filterDepartment">🏫 Class (Department)</label>
-                            <select id="filterDepartment" onchange="applyFilters()">
+                            <select id="filterDepartment">
                                 <option value="">-- Select Class --</option>
                             </select>
                         </div>
+                        <div class="form-group">
+                            <label for="studentSearch">🔎 Search Student</label>
+                            <input type="text" id="studentSearch" class="form-input" placeholder="Search by name, email, or roll number..." onkeyup="handleSearchKeyup(event)">
+                        </div>
                     </div>
                     <div class="reset-section">
-                        <button class="reset-btn" onclick="resetFilters()">
+                        <button class="search-btn primary" onclick="searchStudents()" style="display: flex; align-items: center; gap: 8px; padding: 12px 24px; background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
+                            <span>🔍</span>
+                            <span>Search</span>
+                        </button>
+                        <button class="reset-btn" onclick="resetFilters()" style="margin-left: 12px;">
                             <span>🔄</span>
                             <span>Reset Filters</span>
                         </button>
@@ -496,6 +533,7 @@
                                     <th class="sortable" onclick="sortTable('name')">Name</th>
                                     <th class="sortable" onclick="sortTable('department')">Class</th>
                                     <th class="sortable" onclick="sortTable('year')">Year</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="studentsTableBody">

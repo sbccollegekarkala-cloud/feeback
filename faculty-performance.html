@@ -1101,6 +1101,9 @@
                 <a href="manage-faculties.html" class="nav-item">
                     <span class="icon">👨‍💼</span>
                     <span>Manage Faculties</span></a>
+                <a href="manage-users.html" class="nav-item">
+                    <span class="icon">👥</span>
+                    <span>Manage Users</span></a>
                 <a href="select-faculties.html" class="nav-item">
                     <span class="icon">🏫</span>
                     <span>Class Survey</span></a>
@@ -1419,11 +1422,8 @@
         async function initializeData() {
             await waitForModules();
 
-            // CRITICAL FIX: Clear feedback cache to ensure fresh data from Firebase
-            if (typeof Storage !== 'undefined' && Storage.CacheManager) {
-                Storage.CacheManager.invalidate('feedbacks');
-                console.log('🔄 Cleared feedback cache to load fresh data');
-            }
+            // Note: Do NOT clear cache on page init - let CacheManager handle cache expiration naturally
+            // Only clear cache when user explicitly clicks "Refresh Data" button
 
             allDepartments = await Storage.getDepartments() || [];
             allFeedbacks = await Storage.getFeedbacks() || [];

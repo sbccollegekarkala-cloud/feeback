@@ -20,7 +20,8 @@ import {
 
 /**
  * Cache Manager for localStorage
- * DISABLED: All caching is turned off - always fetch fresh data from Firebase
+ * ENABLED: Uses intelligent caching to reduce Firestore reads
+ * Different cache durations for different data types
  */
 const CacheManager = {
     CACHE_PREFIX: 'ffs_cache_',
@@ -36,51 +37,110 @@ const CacheManager = {
     },
 
     /**
-     * Set cache with timestamp - DISABLED
+     * Set cache with timestamp
      */
     set(key, data, customDuration = null) {
-        // DISABLED: Do not cache anything
-        return;
+        try {
+            const duration = customDuration || this.CACHE_DURATIONS[key] || 10 * 60 * 1000;
+            const cacheKey = this.CACHE_PREFIX + key;
+            const cacheData = {
+                data: data,
+                timestamp: Date.now(),
+                duration: duration
+            };
+            localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+        } catch (error) {
+            console.warn('Cache storage error:', error);
+        }
     },
 
     /**
-     * Get cache if not expired - DISABLED
+     * Get cache if not expired
      */
     get(key) {
-        // DISABLED: Always return null to force fresh data fetch
-        return null;
+        try {
+            const cacheKey = this.CACHE_PREFIX + key;
+            const cached = localStorage.getItem(cacheKey);
+            if (!cached) return null;
+
+            const cacheData = JSON.parse(cached);
+            const now = Date.now();
+            const isExpired = (now - cacheData.timestamp) > cacheData.duration;
+
+            if (isExpired) {
+                this.remove(key);
+                return null;
+            }
+
+            return cacheData.data;
+        } catch (error) {
+            console.warn('Cache retrieval error:', error);
+            return null;
+        }
     },
 
     /**
-     * Remove specific cache - DISABLED
+     * Remove specific cache
      */
     remove(key) {
-        // DISABLED: Do nothing
-        return;
+        try {
+            const cacheKey = this.CACHE_PREFIX + key;
+            localStorage.removeItem(cacheKey);
+        } catch (error) {
+            console.warn('Cache removal error:', error);
+        }
     },
 
     /**
-     * Clear all caches - DISABLED
+     * Clear all caches
      */
     clearAll() {
-        // DISABLED: Do nothing
-        return;
+        try {
+            const keys = Object.keys(localStorage);
+            keys.forEach(key => {
+                if (key.startsWith(this.CACHE_PREFIX)) {
+                    localStorage.removeItem(key);
+                }
+            });
+            console.log('✅ All caches cleared');
+        } catch (error) {
+            console.warn('Cache clear error:', error);
+        }
     },
 
     /**
-     * Clear old/expired caches to free space - DISABLED
+     * Clear old/expired caches to free space
      */
     clearOldCaches() {
-        // DISABLED: Do nothing
-        return;
+        try {
+            const keys = Object.keys(localStorage);
+            let cleared = 0;
+            keys.forEach(key => {
+                if (key.startsWith(this.CACHE_PREFIX)) {
+                    const cached = localStorage.getItem(key);
+                    const cacheData = JSON.parse(cached);
+                    const now = Date.now();
+                    const isExpired = (now - cacheData.timestamp) > cacheData.duration;
+                    if (isExpired) {
+                        localStorage.removeItem(key);
+                        cleared++;
+                    }
+                }
+            });
+            if (cleared > 0) {
+                console.log(`✅ Cleared ${cleared} expired caches`);
+            }
+        } catch (error) {
+            console.warn('Cache cleanup error:', error);
+        }
     },
 
     /**
-     * Invalidate related caches when data changes - DISABLED
+     * Invalidate related caches when data changes
      */
     invalidate(collection) {
-        // DISABLED: Do nothing
-        return;
+        this.remove(collection);
+        console.log(`🔄 Invalidated cache for: ${collection}`);
     }
 };
 
@@ -293,11 +353,33 @@ const Storage = {
                 throw new Error('User ID is required');
             }
 
+            // First delete feedbacks for this user using a batch to avoid many reads/writes
+            try {
+                const feedbacksRef = collection(db, this.COLLECTIONS.FEEDBACKS);
+                const q = query(feedbacksRef, where('studentId', '==', userId));
+                const snapshot = await getDocs(q);
+
+                if (!snapshot.empty) {
+                    const batch = writeBatch(db);
+                    snapshot.forEach(docSnap => {
+                        const docRef = doc(db, this.COLLECTIONS.FEEDBACKS, docSnap.id);
+                        batch.delete(docRef);
+                    });
+                    await batch.commit();
+                    console.log(`🗑️ Deleted ${snapshot.size} feedback(s) for user ${userId}`);
+                }
+            } catch (batchError) {
+                console.warn('Warning: could not batch-delete feedbacks for user:', batchError);
+                // continue to delete user even if feedback cleanup failed
+            }
+
+            // Delete user document
             const userRef = doc(db, this.COLLECTIONS.USERS, userId);
             await deleteDoc(userRef);
 
-            // Invalidate cache
+            // Invalidate caches
             CacheManager.invalidate(this.COLLECTIONS.USERS);
+            CacheManager.invalidate(this.COLLECTIONS.FEEDBACKS);
 
             console.log(`✅ User deleted: ${userId}`);
             return true;
@@ -362,6 +444,44 @@ const Storage = {
         } catch (error) {
             console.error('Failed to find user by username:', error);
             return null;
+        }
+    },
+
+    /**
+     * Find user by roll number (OPTIMIZED - uses Firestore query)
+     */
+    async findUserByRollNumber(rollNumber) {
+        try {
+            if (!rollNumber || typeof rollNumber !== 'string') return null;
+
+            const normalized = rollNumber.toString().trim().toUpperCase();
+            const usersRef = collection(db, this.COLLECTIONS.USERS);
+            const q = query(usersRef, where('rollNumber', '==', normalized), limit(1));
+            const snapshot = await getDocs(q);
+
+            if (snapshot.empty) return null;
+            const docSnap = snapshot.docs[0];
+            return { id: docSnap.id, ...docSnap.data() };
+        } catch (error) {
+            console.error('Failed to find user by roll number:', error);
+            return null;
+        }
+    },
+
+    /**
+     * Delete a single feedback document by ID
+     */
+    async deleteFeedback(feedbackId) {
+        try {
+            if (!feedbackId) return false;
+            const feedbackRef = doc(db, this.COLLECTIONS.FEEDBACKS, feedbackId);
+            await deleteDoc(feedbackRef);
+            CacheManager.invalidate(this.COLLECTIONS.FEEDBACKS);
+            console.log(`✅ Deleted feedback: ${feedbackId}`);
+            return true;
+        } catch (error) {
+            console.error('Failed to delete feedback:', error);
+            return false;
         }
     },
 
@@ -778,6 +898,34 @@ const Storage = {
         } catch (error) {
             console.error('❌ Error in saveFeedback:', error);
             return null;
+        }
+    },
+
+    async migrateFeedbackRollNumbers() {
+        try {
+            const feedbacks = await this.getFeedbacks();
+            const users = await this.getUsers();
+            let migrated = 0;
+
+            for (const feedback of feedbacks) {
+                if ((!feedback.studentRollNumber || feedback.studentRollNumber === '') && feedback.studentId && feedback.id) {
+                    const student = users.find(u => u.id === feedback.studentId);
+                    if (student && student.rollNumber) {
+                        const feedbackRef = doc(db, this.COLLECTIONS.FEEDBACKS, feedback.id);
+                        await updateDoc(feedbackRef, {
+                            studentRollNumber: student.rollNumber
+                        });
+                        migrated++;
+                    }
+                }
+            }
+
+            CacheManager.invalidate(this.COLLECTIONS.FEEDBACKS);
+            console.log(`✅ Migrated ${migrated} feedback records with student roll numbers`);
+            return { migrated, total: feedbacks.length };
+        } catch (error) {
+            console.error('❌ Error migrating feedback roll numbers:', error);
+            return { migrated: 0, error: error.message };
         }
     },
 

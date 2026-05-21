@@ -72,35 +72,51 @@ async function loadAllFeedbacks() {
             feedbacks = await Storage.getFeedbacks();
         }
 
-        // VALIDATION: Filter out orphaned feedbacks
+        // OPTIMIZATION: Load reference data ONCE instead of per-item
+        const surveys = await Storage.getSurveys();
+        const surveyMap = new Map(surveys.map(s => [s.id, s]));
+        
+        const departments = await Storage.getDepartments();
+        const departmentMap = new Map(departments.map(d => [d.name, d]));
+        
+        // VALIDATION: Filter out orphaned feedbacks (using in-memory maps)
         const validFeedbacks = [];
+        let orphanedCount = 0;
+        
         for (const feedback of feedbacks) {
-            // Check if survey exists
-            const survey = await Storage.getSurveyById(feedback.surveyId);
-            if (!survey) {
+            let isValid = true;
+            
+            // Check if survey exists (in-memory lookup)
+            if (!surveyMap.has(feedback.surveyId)) {
                 console.warn(`⚠️ Orphaned feedback: Survey ${feedback.surveyId} not found`);
-                continue;
+                isValid = false;
             }
 
-            // Check if department exists
-            const department = await Storage.getDepartmentByName(feedback.studentDepartment);
-            if (!department) {
+            // Check if department exists (in-memory lookup)
+            if (isValid && !departmentMap.has(feedback.studentDepartment)) {
                 console.warn(`⚠️ Orphaned feedback: Department ${feedback.studentDepartment} not found`);
-                continue;
+                isValid = false;
             }
 
-            // Check if faculty exists
-            const departmentFacultyIds = (department.faculties || []).map(f => f.id);
-            const invalidFaculty = feedback.selectedTeachers.some(t => !departmentFacultyIds.includes(t.id));
-            if (invalidFaculty) {
-                console.warn(`⚠️ Orphaned feedback: Some faculty no longer exist`);
-                continue;
+            // Check if faculty exists (in-memory lookup)
+            if (isValid) {
+                const department = departmentMap.get(feedback.studentDepartment);
+                const departmentFacultyIds = (department.faculties || []).map(f => f.id);
+                const invalidFaculty = feedback.selectedTeachers.some(t => !departmentFacultyIds.includes(t.id));
+                if (invalidFaculty) {
+                    console.warn(`⚠️ Orphaned feedback: Some faculty no longer exist`);
+                    isValid = false;
+                }
             }
-
-            validFeedbacks.push(feedback);
+            
+            if (isValid) {
+                validFeedbacks.push(feedback);
+            } else {
+                orphanedCount++;
+            }
         }
 
-        console.log(`✅ Loaded ${validFeedbacks.length} valid feedbacks (filtered ${feedbacks.length - validFeedbacks.length} orphaned)`);
+        console.log(`✅ Loaded ${validFeedbacks.length} valid feedbacks (filtered ${orphanedCount} orphaned)`);
         return validFeedbacks;
     } catch (error) {
         console.error('Error loading feedbacks:', error);

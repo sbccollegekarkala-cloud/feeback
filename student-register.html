@@ -1525,7 +1525,7 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="rollNumber" class="form-label">Roll Number</label>
-                    <input type="text" id="rollNumber" name="rollNumber" class="form-input" placeholder="Enter your roll number" required autocomplete="off">
+                    <input type="number" id="rollNumber" name="rollNumber" class="form-input" placeholder="Enter your roll number" required autocomplete="off">
                     <div class="field-error-container"></div>
                 </div>
                 <div class="form-group">
@@ -1643,7 +1643,7 @@
                 try {
                     const fullName = document.getElementById('fullName').value.trim();
                     const email = document.getElementById('email').value.trim().toLowerCase();
-                    const rollNumber = document.getElementById('rollNumber').value.trim().toUpperCase();
+                    const rollNumber = document.getElementById('rollNumber').value.trim();
                     const classId = document.getElementById('classSelect').value;
                     const password = document.getElementById('password').value;
                     const confirmPassword = document.getElementById('confirmPassword').value;
@@ -1728,14 +1728,14 @@
 
                     // Check if roll number already exists
                     console.log('Checking roll number...');
-                    const users = await Promise.race([
-                        Storage.getUsers(),
+                    const existingRollUser = await Promise.race([
+                        Storage.findUserByRollNumber(rollNumber),
                         timeoutPromise
                     ]);
-                    
-                    console.log('✅ Got users list, count:', users.length);
-                    
-                    if (users.some(u => u.rollNumber === rollNumber)) {
+
+                    console.log('✅ Roll number check complete:', existingRollUser ? 'Exists' : 'Available');
+
+                    if (existingRollUser) {
                         showAlert('Roll number already registered! Please check your roll number.', 'danger');
                         if (submitBtn) {
                             submitBtn.classList.remove('loading');

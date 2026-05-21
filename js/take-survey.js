@@ -695,6 +695,7 @@ async function submitSurvey() {
 
         // Student information
         studentName: currentUser_Survey.name || 'Unknown',
+        studentRollNumber: currentUser_Survey.rollNumber || 'Unknown',
         studentYear: studentYear || 0,
         studentClassId: currentUser_Survey.classId || '',
         studentClassName: currentUser_Survey.className || 'Unknown',

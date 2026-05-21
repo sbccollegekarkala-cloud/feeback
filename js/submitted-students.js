@@ -36,29 +36,41 @@ async function initializePage() {
         document.getElementById('userInitials').textContent = initials;
     }
 
-    await loadData();
+    // Load data to populate filters
+    try {
+        await loadData();
+        // After data loads, show empty state message
+        showEmptyState();
+    } catch (error) {
+        console.error('Error loading initial data:', error);
+        showAlert('Error loading data. Please refresh the page.', 'error');
+    }
 }
 
-// Load all data
+// Load all data (called when search button is clicked)
 async function loadData() {
     try {
         console.log('Loading submitted students data...');
+        const startTime = performance.now();
 
-        // Get all feedbacks
+        // Get all feedbacks (uses cache if available)
         const feedbacks = await Storage.getFeedbacks();
         console.log('Feedbacks loaded:', feedbacks.length);
 
-        // Get all users for additional details
+        // Get all users for additional details (uses cache)
         const users = await Storage.getUsers();
         console.log('Users loaded:', users.length);
 
-        // Get all surveys for survey names
+        // Get all surveys for survey names (uses cache)
         const surveys = await Storage.getSurveys();
         console.log('Surveys loaded:', surveys.length);
 
-        // Get all classes to resolve class IDs to names
+        // Get all classes to resolve class IDs to names (uses cache)
         const classes = await Storage.getClasses();
         console.log('Classes loaded:', classes.length);
+        
+        const loadTime = (performance.now() - startTime).toFixed(2);
+        console.log(`⏱️ Data loaded in ${loadTime}ms`);
 
         // Process submissions
         allSubmissions = feedbacks.map(feedback => {
@@ -104,9 +116,9 @@ async function loadData() {
 
         // Populate filter dropdowns
         populateFilters();
-
-        // Show empty state initially
-        showEmptyState();
+        
+        // Data is now ready - show filters with data populated
+        updateFiltersFromData();
 
     } catch (error) {
         console.error('Error loading data:', error);
@@ -143,17 +155,34 @@ function populateFilters() {
     });
 }
 
-// Apply filters
-function applyFilters() {
-    const year = document.getElementById('filterYear').value;
-    const department = document.getElementById('filterDepartment').value;
+// Search students - applies filters to already-loaded data
+async function searchStudents() {
+    try {
+        const year = document.getElementById('filterYear').value;
+        const department = document.getElementById('filterDepartment').value;
+        const searchTerm = document.getElementById('studentSearch').value.trim().toLowerCase();
 
-    // Check if any filter is selected
-    if (!year && !department) {
-        showEmptyState();
-        return;
+        if (!year && !department && !searchTerm) {
+            showAlert('Please select at least one filter or search term', 'warning');
+            return;
+        }
+
+        // Apply filters to already-loaded data
+        applyFiltersWithSearch(year, department, searchTerm);
+    } catch (error) {
+        console.error('Error searching:', error);
+        showAlert('Error: ' + error.message, 'error');
     }
+}
 
+// Update filters UI after data is loaded
+function updateFiltersFromData() {
+    console.log('Filter dropdowns updated with data');
+    // Filters are already populated by populateFilters()
+}
+
+// Apply filters with search term
+function applyFiltersWithSearch(year, department, searchTerm) {
     // Filter submissions
     filteredSubmissions = allSubmissions.filter(submission => {
         // Year filter
@@ -166,8 +195,20 @@ function applyFilters() {
             return false;
         }
 
+        // Search filter - search by name, email, or roll number
+        if (searchTerm) {
+            const matchesSearch = submission.studentName.toLowerCase().includes(searchTerm) ||
+                                 submission.studentEmail.toLowerCase().includes(searchTerm) ||
+                                 submission.rollNumber.toString().toLowerCase().includes(searchTerm);
+            if (!matchesSearch) {
+                return false;
+            }
+        }
+
         return true;
     });
+
+
 
     console.log('Filtered submissions:', filteredSubmissions.length);
 
@@ -178,10 +219,21 @@ function applyFilters() {
     }
 }
 
+// Apply filters without search (for compatibility)
+function applyFilters() {
+    const year = document.getElementById('filterYear').value;
+    const department = document.getElementById('filterDepartment').value;
+    applyFiltersWithSearch(year, department, '');
+}
+
 // Reset filters
 function resetFilters() {
     document.getElementById('filterYear').value = '';
     document.getElementById('filterDepartment').value = '';
+    const searchBox = document.getElementById('studentSearch');
+    if (searchBox) {
+        searchBox.value = '';
+    }
 
     filteredSubmissions = [];
     showEmptyState();
@@ -264,6 +316,11 @@ function displayStudentsList() {
             <td>${submission.studentName}</td>
             <td>${submission.department}</td>
             <td>${submission.year}${yearSuffix} Year</td>
+            <td>
+                <button class="delete-btn" onclick="deleteFeedback('${submission.id}', '${submission.studentName}')" title="Delete feedback">
+                    🗑️ Delete
+                </button>
+            </td>
         `;
 
         tbody.appendChild(row);
@@ -433,11 +490,57 @@ function exportToCSV() {
     showAlert('✅ CSV exported successfully!', 'success');
 }
 
+// Delete feedback submitted by a student
+async function deleteFeedback(feedbackId, studentName) {
+    if (!confirm(`⚠️ Are you sure you want to delete the feedback submitted by ${studentName}?\n\nThis action cannot be undone!`)) {
+        return;
+    }
+
+    try {
+        // Use Storage.deleteFeedback when available (Firestore)
+        if (typeof Storage.deleteFeedback === 'function') {
+            const ok = await Storage.deleteFeedback(feedbackId);
+            if (!ok) {
+                showAlert('❌ Feedback not found or delete failed!', 'error');
+                return;
+            }
+            showAlert(`✅ Feedback from ${studentName} has been deleted successfully!`, 'success');
+            setTimeout(() => location.reload(), 1200);
+            return;
+        }
+
+        // Fallback for localStorage-based Storage implementations
+        const feedbacks = await Storage.getFeedbacks();
+        const updatedFeedbacks = feedbacks.filter(f => f.id !== feedbackId);
+        if (feedbacks.length === updatedFeedbacks.length) {
+            showAlert('❌ Feedback not found!', 'error');
+            return;
+        }
+        localStorage.setItem('feedbacks', JSON.stringify(updatedFeedbacks));
+        showAlert(`✅ Feedback from ${studentName} has been deleted successfully!`, 'success');
+        setTimeout(() => location.reload(), 1200);
+
+    } catch (error) {
+        console.error('Error deleting feedback:', error);
+        showAlert('❌ Error deleting feedback: ' + error.message, 'error');
+    }
+}
+
+// Handle search box keyup - trigger search on Enter
+function handleSearchKeyup(event) {
+    if (event.key === 'Enter') {
+        searchStudents();
+    }
+}
+
 // Make functions globally available
 window.applyFilters = applyFilters;
 window.resetFilters = resetFilters;
-window.exportToCSV = exportToCSV;
 window.sortTable = sortTable;
+window.exportToCSV = exportToCSV;
+window.deleteFeedback = deleteFeedback;
+window.searchStudents = searchStudents;
+window.handleSearchKeyup = handleSearchKeyup;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', initializePage);
