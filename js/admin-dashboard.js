@@ -68,6 +68,9 @@ async function initializeAdminDashboard() {
     // Load recent surveys
     await loadRecentSurveys();
 
+    // Load user management panel data
+    await loadUserManagementPanel();
+
     // Enable/disable Select Faculties button based on existing classes in Firebase
     try {
         const classes = await Storage.getClasses();
@@ -84,6 +87,7 @@ async function initializeAdminDashboard() {
         if (!document.hidden) {
             await loadStatistics();
             await loadRecentSurveys();
+            await loadUserManagementPanel();
         }
     });
 }
@@ -578,6 +582,130 @@ async function selectFaculties(classId) {
         showAlert('Failed to load classes: ' + error.message, 'danger');
     }
 }
+
+// Load user management panel statistics
+async function loadUserManagementPanel() {
+    try {
+        const users = await Storage.getUsers();
+        const admins = users.filter(u => u.role === 'admin').length;
+        const students = users.filter(u => u.role === 'student').length;
+
+        document.getElementById('dashboardTotalUsers').textContent = users.length;
+        document.getElementById('dashboardAdminCount').textContent = admins;
+        document.getElementById('dashboardStudentCount').textContent = students;
+
+        console.log('✅ User management panel loaded');
+    } catch (error) {
+        console.error('Error loading user management panel:', error);
+        document.getElementById('dashboardTotalUsers').textContent = '?';
+        document.getElementById('dashboardAdminCount').textContent = '?';
+        document.getElementById('dashboardStudentCount').textContent = '?';
+    }
+}
+
+// Open troubleshooting modal
+function openTroubleshootingModal() {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    `;
+
+    const content = document.createElement('div');
+    content.style.cssText = `
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        max-width: 500px;
+        width: 90%;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    `;
+
+    content.innerHTML = `
+        <h2 style="margin: 0 0 20px 0; color: #1a202c; font-size: 22px; font-weight: 700;">🔧 System Troubleshooting</h2>
+        <p style="margin: 0 0 20px 0; color: #666; font-size: 14px; line-height: 1.6;">Clear cache and refresh data to fix synchronization issues. This will not delete any data.</p>
+        
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 25px;">
+            <button id="clearCacheBtn" style="padding: 12px 24px; background: #f59e0b; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.background='#d97706'" onmouseout="this.style.background='#f59e0b'">Clear Cache</button>
+            <button id="refreshDataBtn" style="padding: 12px 24px; background: #10b981; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">Refresh Data</button>
+            <button id="syncBtn" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.background='#5a67d8'" onmouseout="this.style.background='#667eea'">Sync All</button>
+        </div>
+        
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+            <button id="closeBtn" style="padding: 12px 24px; border: 2px solid #e2e8f0; background: white; color: #4a5568; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">Close</button>
+        </div>
+    `;
+
+    modal.appendChild(content);
+    document.body.appendChild(modal);
+
+    // Close button
+    content.querySelector('#closeBtn').onclick = () => {
+        document.body.removeChild(modal);
+    };
+
+    // Clear cache button
+    content.querySelector('#clearCacheBtn').onclick = async () => {
+        try {
+            if (Storage.CacheManager) {
+                Storage.CacheManager.clearAll();
+                showAlert('✅ Cache cleared successfully', 'success');
+            }
+        } catch (error) {
+            showAlert('❌ Error clearing cache: ' + error.message, 'error');
+        }
+    };
+
+    // Refresh data button
+    content.querySelector('#refreshDataBtn').onclick = async () => {
+        try {
+            if (Storage.CacheManager) {
+                Storage.CacheManager.clearAll();
+            }
+            await loadStatistics();
+            await loadRecentSurveys();
+            await loadUserManagementPanel();
+            showAlert('✅ Data refreshed successfully', 'success');
+        } catch (error) {
+            showAlert('❌ Error refreshing data: ' + error.message, 'error');
+        }
+    };
+
+    // Sync all button
+    content.querySelector('#syncBtn').onclick = async () => {
+        try {
+            if (Storage.CacheManager) {
+                Storage.CacheManager.clearAll();
+            }
+            await Storage.syncWithFirebase?.();
+            await loadStatistics();
+            await loadRecentSurveys();
+            await loadUserManagementPanel();
+            showAlert('✅ All data synced with Firestore', 'success');
+        } catch (error) {
+            showAlert('⚠️ Sync completed (some items may have failed): ' + error.message, 'warning');
+        }
+    };
+
+    // Close modal when clicking outside
+    modal.onclick = (e) => {
+        if (e.target === modal) {
+            document.body.removeChild(modal);
+        }
+    };
+}
+
+// Expose to global scope
+window.openTroubleshootingModal = openTroubleshootingModal;
+window.loadUserManagementPanel = loadUserManagementPanel;
 
 // Expose to global scope
 window.createClass = createClass;
