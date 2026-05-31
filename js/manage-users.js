@@ -223,8 +223,10 @@ function displayUsers(users) {
 
         row.innerHTML = `
             <td>${index + 1}</td>
-            <td class="truncated-cell" title="${user.email}">${user.email}</td>
-            <td class="truncated-cell" title="${user.name}">${user.name}</td>
+            <td>
+                <div style="font-size: 12px; color: #667eea; font-weight: 600;" title="${user.email}">${user.email}</div>
+                <div style="font-size: 13px; color: #1a202c; margin-top: 4px;" title="${user.name}">${user.name}</div>
+            </td>
             <td>${user.rollNumber}</td>
             <td>
                 <span class="role-badge ${user.role}">
