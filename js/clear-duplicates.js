@@ -7,7 +7,7 @@ function waitForModules() {
         let attempts = 0;
         const checkModules = () => {
             attempts++;
-            if (typeof window.Storage !== 'undefined' && typeof window.checkAuth !== 'undefined') {
+            if (window.Storage && typeof window.Storage.getDepartments === 'function' && typeof window.checkAuth === 'function') {
                 console.log('Modules ready');
                 resolve();
             } else if (attempts > 50) {

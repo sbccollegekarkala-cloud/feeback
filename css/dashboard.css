@@ -302,6 +302,29 @@ body {
     text-overflow: ellipsis;
 }
 
+.truncated-cell,
+.student-details-cell .truncated-cell {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.student-details-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-width: 260px;
+}
+
+.truncated-cell:hover {
+    background-color: rgba(102, 126, 234, 0.08);
+    color: #2c5282;
+}
+
 @media (max-width: 768px) {
     .nav-item {
         padding: 12px 15px;

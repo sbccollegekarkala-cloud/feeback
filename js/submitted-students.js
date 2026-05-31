@@ -10,7 +10,7 @@ let currentSortDirection = 'asc';
 function waitForModules() {
     return new Promise((resolve) => {
         const checkModules = () => {
-            if (typeof window.Storage !== 'undefined' && typeof window.checkAuth !== 'undefined') {
+            if (window.Storage && typeof window.Storage.getFeedbacks === 'function' && typeof window.checkAuth === 'function') {
                 resolve();
             } else {
                 setTimeout(checkModules, 100);
@@ -117,8 +117,8 @@ async function loadData() {
         // Populate filter dropdowns
         populateFilters();
         
-        // Data is now ready - show filters with data populated
-        updateFiltersFromData();
+        // Show empty state by default, waiting for user to apply filters
+        showEmptyState();
 
     } catch (error) {
         console.error('Error loading data:', error);
@@ -155,34 +155,59 @@ function populateFilters() {
     });
 }
 
-// Search students - applies filters to already-loaded data
+// Search students - independent search function
 async function searchStudents() {
     try {
-        const year = document.getElementById('filterYear').value;
-        const department = document.getElementById('filterDepartment').value;
         const searchTerm = document.getElementById('studentSearch').value.trim().toLowerCase();
 
-        if (!year && !department && !searchTerm) {
-            showAlert('Please select at least one filter or search term', 'warning');
+        if (!searchTerm) {
+            showAlert('Please enter a search term', 'warning');
             return;
         }
 
-        // Apply filters to already-loaded data
-        applyFiltersWithSearch(year, department, searchTerm);
+        // Search all submissions
+        filteredSubmissions = allSubmissions.filter(submission => {
+            return submission.studentName.toLowerCase().includes(searchTerm) ||
+                   submission.studentEmail.toLowerCase().includes(searchTerm) ||
+                   submission.rollNumber.toString().toLowerCase().includes(searchTerm);
+        });
+
+        // Sort by roll number
+        filteredSubmissions.sort((a, b) => {
+            const rollA = String(a.rollNumber || '').toLowerCase();
+            const rollB = String(b.rollNumber || '').toLowerCase();
+            return rollA.localeCompare(rollB);
+        });
+
+        console.log('Search results:', filteredSubmissions.length);
+
+        if (filteredSubmissions.length === 0) {
+            showNoResultsState();
+        } else {
+            displaySubmissions();
+        }
     } catch (error) {
         console.error('Error searching:', error);
         showAlert('Error: ' + error.message, 'error');
     }
 }
 
-// Update filters UI after data is loaded
-function updateFiltersFromData() {
-    console.log('Filter dropdowns updated with data');
-    // Filters are already populated by populateFilters()
+// Reset search
+function resetSearch() {
+    document.getElementById('studentSearch').value = '';
+    showEmptyState();
 }
 
-// Apply filters with search term
-function applyFiltersWithSearch(year, department, searchTerm) {
+// Apply filters (independent from search)
+function applyFilters() {
+    const year = document.getElementById('filterYear').value;
+    const department = document.getElementById('filterDepartment').value;
+
+    if (!year && !department) {
+        showAlert('Please select at least one filter', 'warning');
+        return;
+    }
+
     // Filter submissions
     filteredSubmissions = allSubmissions.filter(submission => {
         // Year filter
@@ -195,20 +220,15 @@ function applyFiltersWithSearch(year, department, searchTerm) {
             return false;
         }
 
-        // Search filter - search by name, email, or roll number
-        if (searchTerm) {
-            const matchesSearch = submission.studentName.toLowerCase().includes(searchTerm) ||
-                                 submission.studentEmail.toLowerCase().includes(searchTerm) ||
-                                 submission.rollNumber.toString().toLowerCase().includes(searchTerm);
-            if (!matchesSearch) {
-                return false;
-            }
-        }
-
         return true;
     });
 
-
+    // Sort by roll number
+    filteredSubmissions.sort((a, b) => {
+        const rollA = String(a.rollNumber || '').toLowerCase();
+        const rollB = String(b.rollNumber || '').toLowerCase();
+        return rollA.localeCompare(rollB);
+    });
 
     console.log('Filtered submissions:', filteredSubmissions.length);
 
@@ -219,21 +239,11 @@ function applyFiltersWithSearch(year, department, searchTerm) {
     }
 }
 
-// Apply filters without search (for compatibility)
-function applyFilters() {
-    const year = document.getElementById('filterYear').value;
-    const department = document.getElementById('filterDepartment').value;
-    applyFiltersWithSearch(year, department, '');
-}
-
 // Reset filters
 function resetFilters() {
     document.getElementById('filterYear').value = '';
     document.getElementById('filterDepartment').value = '';
-    const searchBox = document.getElementById('studentSearch');
-    if (searchBox) {
-        searchBox.value = '';
-    }
+    document.getElementById('studentSearch').value = '';
 
     filteredSubmissions = [];
     showEmptyState();
@@ -297,13 +307,8 @@ function displayStudentsList() {
 
     tbody.innerHTML = '';
 
-    // Apply current sorting
-    const sortedSubmissions = sortSubmissions([...filteredSubmissions], currentSortColumn, currentSortDirection);
-
-    // Update sort indicators in table headers
-    updateSortIndicators();
-
-    sortedSubmissions.forEach((submission, index) => {
+    // Submissions are already sorted by roll number during filter/search
+    filteredSubmissions.forEach((submission, index) => {
         const row = document.createElement('tr');
 
         const yearSuffix = submission.year === 1 ? 'st' :
@@ -313,8 +318,11 @@ function displayStudentsList() {
         row.innerHTML = `
             <td>${index + 1}</td>
             <td>${submission.rollNumber}</td>
-            <td>${submission.studentName}</td>
-            <td>${submission.department}</td>
+            <td class="student-details-cell">
+                <div class="truncated-cell" title="${submission.studentName}">${submission.studentName}</div>
+                <div class="truncated-cell" title="${submission.studentEmail}">${submission.studentEmail}</div>
+            </td>
+            <td class="truncated-cell" title="${submission.department}">${submission.department}</td>
             <td>${submission.year}${yearSuffix} Year</td>
             <td>
                 <button class="delete-btn" onclick="deleteFeedback('${submission.id}', '${submission.studentName}')" title="Delete feedback">
@@ -526,21 +534,14 @@ async function deleteFeedback(feedbackId, studentName) {
     }
 }
 
-// Handle search box keyup - trigger search on Enter
-function handleSearchKeyup(event) {
-    if (event.key === 'Enter') {
-        searchStudents();
-    }
-}
-
 // Make functions globally available
 window.applyFilters = applyFilters;
 window.resetFilters = resetFilters;
+window.resetSearch = resetSearch;
 window.sortTable = sortTable;
 window.exportToCSV = exportToCSV;
 window.deleteFeedback = deleteFeedback;
 window.searchStudents = searchStudents;
-window.handleSearchKeyup = handleSearchKeyup;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', initializePage);

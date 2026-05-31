@@ -28,11 +28,11 @@ async function initializeCreateSurvey() {
         return;
     }
 
-    // Load classes for survey (from Firebase with localStorage caching)
-    await loadClassesForSurvey();
-
-    // Load questions
-    await loadAvailableQuestions();
+    // Load classes and questions in parallel to reduce startup lag
+    await Promise.all([
+        loadClassesForSurvey(),
+        loadAvailableQuestions()
+    ]);
 
     // Form submission
     const form = document.getElementById('createSurveyForm');

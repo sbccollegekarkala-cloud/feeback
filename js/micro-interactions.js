@@ -359,7 +359,23 @@ document.addEventListener('DOMContentLoaded', () => {
     RippleEffect.init();
     SmoothScroll.init();
     PageTransitionManager.applyToContent();
+    TruncatedCellViewer.init();
 });
+
+class TruncatedCellViewer {
+    static init() {
+        document.body.addEventListener('click', (event) => {
+            const cell = event.target.closest('.truncated-cell');
+            if (!cell) return;
+
+            const fullText = cell.getAttribute('title') || cell.textContent;
+            if (!fullText) return;
+
+            event.stopPropagation();
+            alert(fullText.trim());
+        });
+    }
+}
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {

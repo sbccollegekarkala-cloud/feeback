@@ -541,6 +541,32 @@ const Storage = {
         }
     },
 
+    async updateUser(userId, updates) {
+        try {
+            if (!userId) {
+                throw new Error('User ID is required to update user details');
+            }
+
+            if (!updates || typeof updates !== 'object') {
+                throw new Error('Updates must be an object');
+            }
+
+            const userRef = doc(db, this.COLLECTIONS.USERS, userId);
+            await updateDoc(userRef, {
+                ...updates,
+                updatedAt: new Date().toISOString()
+            });
+
+            CacheManager.invalidate(this.COLLECTIONS.USERS);
+
+            console.log(`✅ User updated: ${userId}`);
+            return true;
+        } catch (error) {
+            console.error('Failed to update user:', error);
+            return false;
+        }
+    },
+
     // ==================== SESSION MANAGEMENT ====================
 
     /**

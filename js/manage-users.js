@@ -8,7 +8,7 @@ let currentUser = null;
 function waitForModules() {
     return new Promise((resolve) => {
         const checkModules = () => {
-            if (typeof window.Storage !== 'undefined' && typeof window.checkAuth !== 'undefined') {
+            if (window.Storage && typeof window.Storage.getUsers === 'function' && typeof window.checkAuth === 'function') {
                 resolve();
             } else {
                 setTimeout(checkModules, 100);
@@ -54,8 +54,17 @@ async function loadData() {
             role: user.role || 'user',
             className: user.className || 'N/A',
             registeredAt: user.registeredAt || new Date().toISOString(),
-            password: user.password || ''
+            password: user.password || '',
+            phone: user.phone || '',
+            address: user.address || ''
         }));
+
+        // Sort by roll number
+        allUsers.sort((a, b) => {
+            const rollA = String(a.rollNumber || '').toLowerCase();
+            const rollB = String(b.rollNumber || '').toLowerCase();
+            return rollA.localeCompare(rollB);
+        });
 
         console.log('Processed users:', allUsers.length);
 
@@ -66,7 +75,7 @@ async function loadData() {
         populateFilters();
 
         // Show empty state initially
-        displayUsers(allUsers);
+        showEmptyState();
 
     } catch (error) {
         console.error('Error loading data:', error);
@@ -104,14 +113,13 @@ function populateFilters() {
     });
 }
 
-// Apply filters
+// Apply filters (independent from search)
 function applyFilters() {
     const role = document.getElementById('filterRole').value;
     const className = document.getElementById('filterClass').value;
-    const searchTerm = document.getElementById('searchUser').value.toLowerCase();
 
-    // Filter users
-    filteredUsers = allUsers.filter(user => {
+    // Filter users based on role and class only
+    let filtered = allUsers.filter(user => {
         // Role filter
         if (role && user.role !== role) {
             return false;
@@ -122,35 +130,67 @@ function applyFilters() {
             return false;
         }
 
-        // Search filter
-        if (searchTerm) {
-            const matchesEmail = user.email.toLowerCase().includes(searchTerm);
-            const matchesName = user.name.toLowerCase().includes(searchTerm);
-            if (!matchesEmail && !matchesName) {
-                return false;
-            }
-        }
-
         return true;
     });
 
-    console.log('Filtered users:', filteredUsers.length);
+    // Sort by roll number
+    filtered.sort((a, b) => {
+        const rollA = String(a.rollNumber || '').toLowerCase();
+        const rollB = String(b.rollNumber || '').toLowerCase();
+        return rollA.localeCompare(rollB);
+    });
 
-    if (filteredUsers.length === 0) {
+    console.log('Filtered users:', filtered.length);
+
+    if (filtered.length === 0) {
         showEmptyState();
     } else {
-        displayUsers(filteredUsers);
+        displayUsers(filtered);
     }
+}
+
+// Apply search (independent from filters)
+function applySearch() {
+    const searchTerm = document.getElementById('searchUser').value.toLowerCase();
+
+    // Search based on email, name, and roll number
+    let searched = allUsers.filter(user => {
+        if (!searchTerm) return true;
+        
+        const matchesEmail = user.email.toLowerCase().includes(searchTerm);
+        const matchesName = user.name.toLowerCase().includes(searchTerm);
+        const matchesRoll = String(user.rollNumber || '').toLowerCase().includes(searchTerm);
+        
+        return matchesEmail || matchesName || matchesRoll;
+    });
+
+    // Sort by roll number
+    searched.sort((a, b) => {
+        const rollA = String(a.rollNumber || '').toLowerCase();
+        const rollB = String(b.rollNumber || '').toLowerCase();
+        return rollA.localeCompare(rollB);
+    });
+
+    console.log('Searched users:', searched.length);
+
+    if (searched.length === 0) {
+        showEmptyState();
+    } else {
+        displayUsers(searched);
+    }
+}
+
+// Reset search
+function resetSearch() {
+    document.getElementById('searchUser').value = '';
+    showEmptyState();
 }
 
 // Reset filters
 function resetFilters() {
     document.getElementById('filterRole').value = '';
     document.getElementById('filterClass').value = '';
-    document.getElementById('searchUser').value = '';
-
-    filteredUsers = [];
-    displayUsers(allUsers);
+    showEmptyState();
 }
 
 // Show empty state
@@ -183,27 +223,53 @@ function displayUsers(users) {
 
         row.innerHTML = `
             <td>${index + 1}</td>
-            <td>${user.email}</td>
-            <td>${user.name}</td>
+            <td class="truncated-cell" title="${user.email}">${user.email}</td>
+            <td class="truncated-cell" title="${user.name}">${user.name}</td>
             <td>${user.rollNumber}</td>
             <td>
                 <span class="role-badge ${user.role}">
                     ${user.role}
                 </span>
             </td>
-            <td>${user.className}</td>
+            <td class="truncated-cell" title="${user.className}">${user.className}</td>
             <td>${registeredDate}</td>
             <td>
-                <div class="action-buttons">
-                    ${user.role !== 'admin' ? `<button class="delete-btn" onclick="deleteUser('${user.id}', '${user.name}')" title="Delete user">
+                <div class="action-buttons" style="display: flex; gap: 5px; flex-wrap: wrap;">
+                    <button class="view-btn" onclick="openEditModal('${user.id}')" title="Edit user details" style="background: #667eea; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 12px;">
+                        ✏️ Edit
+                    </button>
+                    ${user.role !== 'admin' ? `<button class="delete-btn" onclick="deleteUser('${user.id}', '${user.name}')" title="Delete user" style="background: #e53e3e; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 12px;">
                         🗑️ Delete
-                    </button>` : '<span style="color: #999;">-</span>'}
+                    </button>` : '<span style="color: #999; font-size: 12px;">-</span>'}
                 </div>
             </td>
         `;
 
         tbody.appendChild(row);
     });
+}
+
+// Open edit modal
+function openEditModal(userId) {
+    const user = allUsers.find(u => u.id === userId);
+    if (!user) return;
+
+    document.getElementById('editEmail').value = user.email;
+    document.getElementById('editName').value = user.name;
+    document.getElementById('editRollNumber').value = user.rollNumber;
+    document.getElementById('editRole').value = user.role;
+    document.getElementById('editClass').value = user.className;
+    document.getElementById('editUserModal').dataset.userId = userId;
+    document.getElementById('editUserModal').style.display = 'flex';
+
+    // Prevent body scroll when modal is open
+    document.body.style.overflow = 'hidden';
+}
+
+// Close edit modal
+function closeEditModal() {
+    document.getElementById('editUserModal').style.display = 'none';
+    document.body.style.overflow = 'auto';
 }
 
 // Delete user
@@ -306,13 +372,62 @@ async function migrateOldFeedbackRollNumbers() {
 // Make functions globally available
 window.applyFilters = applyFilters;
 window.resetFilters = resetFilters;
+window.applySearch = applySearch;
+window.resetSearch = resetSearch;
 window.deleteUser = deleteUser;
 window.exportToCSV = exportToCSV;
 window.migrateOldFeedbackRollNumbers = migrateOldFeedbackRollNumbers;
+window.openEditModal = openEditModal;
+window.closeEditModal = closeEditModal;
+
+// Handle form submission for editing users
+function setupEditFormHandler() {
+    const form = document.getElementById('editUserForm');
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const userId = document.getElementById('editUserModal').dataset.userId;
+            const email = document.getElementById('editEmail').value;
+            const name = document.getElementById('editName').value;
+            const role = document.getElementById('editRole').value;
+            const className = document.getElementById('editClass').value;
+
+            try {
+                // Update user in Firebase
+                await Storage.updateUser(userId, {
+                    email,
+                    name,
+                    role,
+                    className
+                });
+                showAlert('✅ User details updated successfully!', 'success');
+                closeEditModal();
+                setTimeout(() => location.reload(), 1200);
+            } catch (error) {
+                console.error('Error updating user:', error);
+                showAlert('❌ Error updating user: ' + error.message, 'error');
+            }
+        });
+    }
+
+    // Close modal when clicking outside
+    const modal = document.getElementById('editUserModal');
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeEditModal();
+            }
+        });
+    }
+}
 
 // Initialize page when DOM is loaded
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializePage);
+    document.addEventListener('DOMContentLoaded', () => {
+        setupEditFormHandler();
+        initializePage();
+    });
 } else {
+    setupEditFormHandler();
     initializePage();
 }

@@ -2453,6 +2453,8 @@
         window.applyNewFilters = applyNewFilters;
         window.resetNewFilters = resetNewFilters;
         window.refreshData = refreshData;
+        window.initializeData = initializeData;
+        window.populateAllDropdowns = populateAllDropdowns;
 
         // Load data on page load
         document.addEventListener('DOMContentLoaded', async () => {
@@ -3044,9 +3046,9 @@
                         .sort((a, b) => a[1].name.localeCompare(b[1].name));
 
                     sortedFaculties.forEach(([facultyId, facultyData], index) => {
-                        // Add separator line before each faculty (except the first one)
+                        // Add spacing before each faculty (except the first one)
                         if (index > 0) {
-                            rows.push(['═══════════════════════════════════════']);
+                            rows.push([]);
                             rows.push([]);
                         }
 
@@ -4519,9 +4521,6 @@
                                 // Add spacing between different faculties
                                 sheetData.push([]);
                                 sheetData.push([]);
-                                sheetData.push(['═══════════════════════════════════════════════════════════']);
-                                sheetData.push([]);
-                                sheetData.push([]);
                             }
 
                             // Sort year entries by year
@@ -4537,7 +4536,6 @@
                                 if (yearIndex > 0) {
                                     // Add spacing between different years for same faculty
                                     sheetData.push([]);
-                                    sheetData.push(['───────────────────────────────────────────────────────────']);
                                     sheetData.push([]);
                                 }
 
@@ -4650,14 +4648,11 @@
                                 // Add response count
                                 sheetData.push(['TOTAL RESPONSES', students.length]);
 
-                                // Add spacing before year average
-                                sheetData.push([]);
-
                                 // Add faculty year average
                                 const facultyYearTotalAvg = allFacultyYearRatings.length > 0 ?
                                     (allFacultyYearRatings.reduce((sum, r) => sum + r, 0) / allFacultyYearRatings.length).toFixed(2) :
                                     '-';
-                                sheetData.push([`${yearText} OVERALL AVERAGE`, '', '', facultyYearTotalAvg]);
+                                sheetData.push([`${yearText} OVERALL AVERAGE`, facultyYearTotalAvg]);
 
                                 // Collect ratings for combined average
                                 allFacultyRatingsAcrossYears = allFacultyRatingsAcrossYears.concat(allFacultyYearRatings);
@@ -4665,15 +4660,12 @@
 
                             // Add spacing before combined average
                             sheetData.push([]);
-                            sheetData.push([]);
-                            sheetData.push(['───────────────────────────────────────────────────────────']);
-                            sheetData.push([]);
 
                             // Add combined average across all years for this faculty
                             const combinedAvg = allFacultyRatingsAcrossYears.length > 0 ?
                                 (allFacultyRatingsAcrossYears.reduce((sum, r) => sum + r, 0) / allFacultyRatingsAcrossYears.length).toFixed(2) :
                                 '-';
-                            sheetData.push([`${facultyName} - COMBINED AVERAGE (ALL YEARS)`, '', '', combinedAvg]);
+                            sheetData.push([`${facultyName} - COMBINED AVERAGE (ALL YEARS)`, combinedAvg]);
 
                             // Add spacing after combined average
                             sheetData.push([]);
@@ -4795,22 +4787,113 @@
                                             vertical: 'center'
                                         };
                                     } else if (cellValue === 'TOTAL' || cellValue === 'AVERAGE' ||
-                                        cellValue === 'TOTAL RESPONSES' || cellValue.includes('AVERAGE')) {
+                                        cellValue === 'TOTAL RESPONSES') {
                                         ws[cellAddress].s.fill = {
                                             fgColor: {
-                                                rgb: 'E0E7FF'
+                                                rgb: cellValue === 'TOTAL RESPONSES' ? 'F0F9FF' : 'E0E7FF'
                                             }
                                         };
                                         ws[cellAddress].s.font = {
                                             bold: true,
                                             color: {
-                                                rgb: '1F2937'
+                                                rgb: cellValue === 'TOTAL RESPONSES' ? '0C4A6E' : '1F2937'
                                             },
                                             sz: 11
                                         };
                                         ws[cellAddress].s.alignment = {
                                             horizontal: 'left',
                                             vertical: 'center'
+                                        };
+                                        if (cellValue === 'TOTAL RESPONSES') {
+                                            ws[cellAddress].s.border = {
+                                                top: {
+                                                    style: 'thin',
+                                                    color: {
+                                                        rgb: '0EA5E9'
+                                                    }
+                                                },
+                                                bottom: {
+                                                    style: 'thin',
+                                                    color: {
+                                                        rgb: '0EA5E9'
+                                                    }
+                                                }
+                                            };
+                                        }
+                                    } else if (cellValue && cellValue.includes('OVERALL AVERAGE')) {
+                                        ws[cellAddress].s.fill = {
+                                            fgColor: {
+                                                rgb: 'FEF08A'
+                                            }
+                                        };
+                                        ws[cellAddress].s.font = {
+                                            bold: true,
+                                            color: {
+                                                rgb: '713F12'
+                                            },
+                                            sz: 11
+                                        };
+                                        ws[cellAddress].s.alignment = {
+                                            horizontal: 'left',
+                                            vertical: 'center'
+                                        };
+                                        ws[cellAddress].s.border = {
+                                            top: {
+                                                style: 'thin',
+                                                color: {
+                                                    rgb: 'FBBF24'
+                                                }
+                                            },
+                                            bottom: {
+                                                style: 'thin',
+                                                color: {
+                                                    rgb: 'FBBF24'
+                                                }
+                                            },
+                                            left: {
+                                                style: 'thin',
+                                                color: {
+                                                    rgb: 'FBBF24'
+                                                }
+                                            },
+                                            right: {
+                                                style: 'thin',
+                                                color: {
+                                                    rgb: 'FBBF24'
+                                                }
+                                            }
+                                        };
+                                    } else if (cellValue && cellValue.match(/^(1st|2nd|3rd|Year)\s+/i)) {
+                                        // Year headers with subtle background
+                                        ws[cellAddress].s.fill = {
+                                            fgColor: {
+                                                rgb: 'E0F2FE'
+                                            }
+                                        };
+                                        ws[cellAddress].s.font = {
+                                            bold: true,
+                                            color: {
+                                                rgb: '0C4A6E'
+                                            },
+                                            sz: 11
+                                        };
+                                        ws[cellAddress].s.alignment = {
+                                            horizontal: 'left',
+                                            vertical: 'center'
+                                        };
+                                        ws[cellAddress].s.border = {
+                                            top: {
+                                                style: 'thin',
+                                                color: {
+                                                    rgb: '0EA5E9'
+                                                }
+                                            },
+                                            bottom: {
+                                                style: 'thin',
+                                                color: {
+                                                    rgb: '0EA5E9'
+                                                }
+                                            }
                                         };
                                     } else if (cellValue.includes('COMBINED AVERAGE')) {
                                         ws[cellAddress].s.fill = {

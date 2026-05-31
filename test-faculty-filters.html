@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filter Debug - Faculty Performance</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #7c3aed;
+        }
+        .test-item {
+            margin: 15px 0;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 13px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        h2 { color: #1a202c; border-bottom: 2px solid #7c3aed; padding-bottom: 10px; }
+        h3 { color: #333; margin-top: 15px; }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #7c3aed;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover { background: #6d28d9; }
+        .data-display {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 12px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Faculty Performance Filter Debug Tool</h1>
+    
+    <div class="test-section">
+        <h2>1. Module Loading Check</h2>
+        <button onclick="testModuleLoading()">Test Module Loading</button>
+        <div id="moduleStatus"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Firebase Data Fetch Test</h2>
+        <button onclick="testDataFetch()">Fetch Data from Firebase</button>
+        <div id="dataFetchStatus"></div>
+        <div id="dataDisplay"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. DOM Elements Check</h2>
+        <button onclick="testDOMElements()">Check DOM Elements</button>
+        <div id="domStatus"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Filter Population Test</h2>
+        <button onclick="testFilterPopulation()">Test Filter Population</button>
+        <div id="populationStatus"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>5. Event Listener Test</h2>
+        <button onclick="testEventListeners()">Test Event Listeners</button>
+        <div id="eventStatus"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>6. Go to Faculty Performance Page</h2>
+        <button onclick="window.location.href='faculty-performance.html'">Open Faculty Performance Page</button>
+    </div>
+
+    <script type="module">
+        import Storage from './js/firebase-storage.js';
+        import { checkAuth, logout, showAlert } from './js/firebase-auth.js';
+        
+        window.Storage = Storage;
+        window.checkAuth = checkAuth;
+        window.logout = logout;
+        window.showAlert = showAlert;
+
+        console.log('✅ Modules imported successfully');
+    </script>
+
+    <script>
+        function log(containerId, message, type = 'info') {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.textContent = message;
+            container.appendChild(div);
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function testModuleLoading() {
+            const moduleStatus = document.getElementById('moduleStatus');
+            moduleStatus.innerHTML = '';
+
+            log('moduleStatus', '🔍 Checking module availability...', 'warning');
+            
+            setTimeout(() => {
+                if (window.Storage) {
+                    log('moduleStatus', '✅ Storage module loaded', 'success');
+                } else {
+                    log('moduleStatus', '❌ Storage module NOT loaded', 'error');
+                }
+
+                if (window.checkAuth) {
+                    log('moduleStatus', '✅ checkAuth function loaded', 'success');
+                } else {
+                    log('moduleStatus', '❌ checkAuth function NOT loaded', 'error');
+                }
+
+                if (window.showAlert) {
+                    log('moduleStatus', '✅ showAlert function loaded', 'success');
+                } else {
+                    log('moduleStatus', '❌ showAlert function NOT loaded', 'error');
+                }
+            }, 500);
+        }
+
+        async function testDataFetch() {
+            const dataFetchStatus = document.getElementById('dataFetchStatus');
+            const dataDisplay = document.getElementById('dataDisplay');
+            dataFetchStatus.innerHTML = '';
+            dataDisplay.innerHTML = '';
+
+            log('dataFetchStatus', '🔄 Checking module before fetching...', 'warning');
+
+            // Wait for modules
+            let attempts = 0;
+            const checkReady = setInterval(async () => {
+                attempts++;
+                if (window.Storage || attempts > 50) {
+                    clearInterval(checkReady);
+
+                    if (!window.Storage) {
+                        log('dataFetchStatus', '❌ Storage not available after 5 seconds', 'error');
+                        return;
+                    }
+
+                    try {
+                        log('dataFetchStatus', '📊 Fetching Departments...', 'warning');
+                        const departments = await window.Storage.getDepartments();
+                        log('dataFetchStatus', `✅ Got ${departments.length} departments`, 'success');
+                        if (departments.length > 0) {
+                            dataDisplay.innerHTML += `<strong>Sample Department:</strong>\n${JSON.stringify(departments[0], null, 2)}\n\n`;
+                        }
+
+                        log('dataFetchStatus', '📊 Fetching Feedbacks...', 'warning');
+                        const feedbacks = await window.Storage.getFeedbacks();
+                        log('dataFetchStatus', `✅ Got ${feedbacks.length} feedbacks`, 'success');
+                        if (feedbacks.length > 0) {
+                            dataDisplay.innerHTML += `<strong>Sample Feedback:</strong>\n${JSON.stringify(feedbacks[0], null, 2)}\n\n`;
+                        }
+
+                        log('dataFetchStatus', '📚 Fetching Classes...', 'warning');
+                        const classes = await window.Storage.getClasses();
+                        log('dataFetchStatus', `✅ Got ${classes.length} classes`, 'success');
+                        if (classes.length > 0) {
+                            dataDisplay.innerHTML += `<strong>Sample Class:</strong>\n${JSON.stringify(classes[0], null, 2)}`;
+                        }
+
+                    } catch (error) {
+                        log('dataFetchStatus', `❌ Error: ${error.message}`, 'error');
+                        dataDisplay.innerHTML += `<strong>Error Details:</strong>\n${error.stack}`;
+                    }
+                }
+            }, 100);
+        }
+
+        function testDOMElements() {
+            const domStatus = document.getElementById('domStatus');
+            domStatus.innerHTML = '';
+
+            const elements = {
+                'facultyFilter (hidden select)': document.getElementById('facultyFilter'),
+                'yearFilter': document.getElementById('yearFilter'),
+                'classFilter': document.getElementById('classFilter'),
+                'facultyCustomSelect': document.getElementById('facultyCustomSelect'),
+                'facultyOptions': document.getElementById('facultyOptions'),
+                'facultySearchInput': document.getElementById('facultySearchInput'),
+                'resultsContainer': document.getElementById('resultsContainer')
+            };
+
+            let allFound = true;
+            for (const [name, element] of Object.entries(elements)) {
+                if (element) {
+                    log('domStatus', `✅ Found: ${name}`, 'success');
+                } else {
+                    log('domStatus', `❌ Missing: ${name}`, 'error');
+                    allFound = false;
+                }
+            }
+
+            if (!allFound) {
+                log('domStatus', '⚠️ Some elements are missing - filters may not work', 'warning');
+            }
+        }
+
+        function testFilterPopulation() {
+            const populationStatus = document.getElementById('populationStatus');
+            populationStatus.innerHTML = '';
+
+            log('populationStatus', '🔍 Checking filter dropdowns...', 'warning');
+
+            const yearFilter = document.getElementById('yearFilter');
+            if (yearFilter) {
+                const yearOptions = yearFilter.querySelectorAll('option');
+                log('populationStatus', `✅ Year filter has ${yearOptions.length} options`, 'success');
+                if (yearOptions.length > 0) {
+                    const optionTexts = Array.from(yearOptions).map(o => o.textContent).join(', ');
+                    populationStatus.innerHTML += `<div class="data-display">Options: ${optionTexts}</div>`;
+                }
+            }
+
+            const classFilter = document.getElementById('classFilter');
+            if (classFilter) {
+                const classOptions = classFilter.querySelectorAll('option');
+                log('populationStatus', `📦 Class filter has ${classOptions.length} options`, classOptions.length > 1 ? 'success' : 'warning');
+            }
+
+            const facultyFilter = document.getElementById('facultyFilter');
+            if (facultyFilter) {
+                const facultyOptions = facultyFilter.querySelectorAll('option');
+                log('populationStatus', `📋 Faculty filter (hidden select) has ${facultyOptions.length} options`, facultyOptions.length > 1 ? 'success' : 'warning');
+            }
+
+            const customOptions = document.getElementById('facultyOptions');
+            if (customOptions) {
+                const customOptionElements = customOptions.querySelectorAll('.custom-select-option');
+                log('populationStatus', `🎨 Custom faculty dropdown has ${customOptionElements.length} visual options`, customOptionElements.length > 1 ? 'success' : 'warning');
+            }
+        }
+
+        function testEventListeners() {
+            const eventStatus = document.getElementById('eventStatus');
+            eventStatus.innerHTML = '';
+
+            log('eventStatus', '🎯 Testing event listeners...', 'warning');
+
+            const yearFilter = document.getElementById('yearFilter');
+            if (yearFilter) {
+                // Try triggering change event
+                const testValue = yearFilter.options[1] ? yearFilter.options[1].value : '';
+                yearFilter.value = testValue;
+                yearFilter.dispatchEvent(new Event('change', { bubbles: true }));
+                log('eventStatus', `✅ Dispatched change event on yearFilter (value: ${testValue})`, 'success');
+            }
+
+            const facultyCustomSelect = document.getElementById('facultyCustomSelect');
+            if (facultyCustomSelect) {
+                const trigger = facultyCustomSelect.querySelector('.custom-select-trigger');
+                if (trigger) {
+                    trigger.click();
+                    const dropdown = facultyCustomSelect.querySelector('.custom-select-dropdown');
+                    const isOpen = dropdown && dropdown.classList.contains('active');
+                    log('eventStatus', `${isOpen ? '✅' : '❌'} Faculty dropdown ${isOpen ? 'opened' : 'did not open'}`, isOpen ? 'success' : 'error');
+                }
+            }
+
+            log('eventStatus', '💡 Check browser console for any JavaScript errors', 'warning');
+        }
+
+        // Auto-run module check
+        window.addEventListener('load', () => {
+            console.log('Page loaded, testing modules in 1 second...');
+            setTimeout(testModuleLoading, 1000);
+        });
+    </script>
+</body>
+</html>

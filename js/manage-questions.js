@@ -136,8 +136,8 @@ function waitForModules() {
         const checkModules = () => {
             attempts++;
 
-            if (typeof window.Storage !== 'undefined' &&
-                typeof window.checkAuth !== 'undefined') {
+            if (window.Storage && typeof window.Storage.getQuestions === 'function' &&
+                typeof window.checkAuth === 'function') {
                 console.log('✅ Modules loaded successfully');
                 console.log('✅ Storage available:', typeof window.Storage);
                 console.log('✅ checkAuth available:', typeof window.checkAuth);

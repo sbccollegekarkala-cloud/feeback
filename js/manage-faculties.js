@@ -126,8 +126,8 @@ function showConfirmDialog(title, message, confirmText = 'Confirm', cancelText =
 function waitForModules() {
     return new Promise((resolve) => {
         const checkModules = () => {
-            if (typeof window.Storage !== 'undefined' &&
-                typeof window.checkAuth !== 'undefined') {
+            if (window.Storage && typeof window.Storage.getDepartments === 'function' &&
+                typeof window.checkAuth === 'function') {
                 console.log('✅ Modules loaded successfully');
                 resolve();
             } else {
